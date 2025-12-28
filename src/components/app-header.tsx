@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { SidebarTrigger } from './ui/sidebar';
-import { Flame, Check } from 'lucide-react';
+import { Flame } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,11 +16,10 @@ import {
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { Chapter, TemplateType, WritingFont } from '@/lib/types';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import htmlToDocx from 'html-to-docx';
 import { saveAs } from 'file-saver';
 import { fonts } from '@/lib/fonts';
+import { generatePdf } from '@/lib/pdf-export';
+import { generateDocx } from '@/app/actions/export';
 
 
 interface AppHeaderProps {
@@ -49,53 +48,17 @@ export default function AppHeader({ onSelectTemplate, chapters, writingFont, onF
     const combinedContent = chapters.map(chapter => 
         `<h1>${chapter.title}</h1><div>${chapter.content}</div>`
     ).join('<hr>');
-
-    const tempContainer = document.createElement('div');
-    tempContainer.innerHTML = combinedContent;
-    tempContainer.style.position = 'absolute';
-    tempContainer.style.left = '-9999px';
-    tempContainer.style.width = '800px'; // A reasonable width for rendering
-    tempContainer.style.padding = '20px';
-    tempContainer.style.fontFamily = fonts.find(f => f.id === writingFont)?.name || 'Literata';
     
-    document.body.appendChild(tempContainer);
+    const fontName = fonts.find(f => f.id === writingFont)?.name || 'Literata';
 
 
     try {
         if (format === 'pdf') {
-            const canvas = await html2canvas(tempContainer, { scale: 2 });
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
-            const ratio = canvasWidth / canvasHeight;
-            const width = pdfWidth;
-            const height = width / ratio;
-
-            let position = 0;
-            let pageHeight = pdf.internal.pageSize.height;
-            let heightLeft = height;
-
-            pdf.addImage(imgData, 'PNG', 0, position, width, height);
-            heightLeft -= pageHeight;
-
-            while (heightLeft > 0) {
-                position = heightLeft - height;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, width, height);
-                heightLeft -= pageHeight;
-            }
-            
-            pdf.save("novel.pdf");
-
+            await generatePdf(combinedContent, fontName);
         } else if (format === 'docx') {
-             const fileBuffer = await htmlToDocx(combinedContent, undefined, {
-                font: fonts.find(f => f.id === writingFont)?.name || 'Literata',
-                fontSize: 12,
-             });
-             saveAs(fileBuffer as Blob, 'novel.docx');
+             const fileBuffer = await generateDocx(combinedContent, fontName);
+             const blob = new Blob([fileBuffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+             saveAs(blob, 'novel.docx');
 
         } else if (format === 'epub') {
             handleComingSoon();
@@ -114,8 +77,6 @@ export default function AppHeader({ onSelectTemplate, chapters, writingFont, onF
             title: "Export Failed",
             description: "An error occurred while exporting your novel.",
         });
-    } finally {
-        document.body.removeChild(tempContainer);
     }
   };
 
@@ -170,4 +131,3 @@ export default function AppHeader({ onSelectTemplate, chapters, writingFont, onF
     </header>
   );
 }
-    
