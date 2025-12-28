@@ -1,6 +1,6 @@
 "use client"
 
-import type { Chapter } from "@/lib/types";
+import type { Chapter, WritingFont } from "@/lib/types";
 import React, { useRef, useState, useEffect } from 'react';
 import { Bold, Italic, Underline, Wand2 } from "lucide-react";
 import { Button } from "./ui/button";
@@ -9,10 +9,12 @@ import { useToast } from "@/hooks/use-toast";
 import { aiGrammarCheck } from "@/ai/flows/ai-grammar-check";
 import { Skeleton } from "./ui/skeleton";
 import { cn } from "@/lib/utils";
+import { fonts } from "@/lib/fonts";
 
 interface EditorProps {
     chapter: Chapter;
     onContentChange: (content: string) => void;
+    writingFont: WritingFont;
 }
 
 const EditorToolbar = ({ onFormat, onProofread, isProofreading }: { onFormat: (command: string) => void, onProofread: () => void, isProofreading: boolean }) => (
@@ -29,11 +31,13 @@ const EditorToolbar = ({ onFormat, onProofread, isProofreading }: { onFormat: (c
 );
 
 
-export default function Editor({ chapter, onContentChange }: EditorProps) {
+export default function Editor({ chapter, onContentChange, writingFont }: EditorProps) {
     const editorRef = useRef<HTMLDivElement>(null);
     const { toast } = useToast();
     const [isProofreading, setIsProofreading] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+
+    const fontClass = fonts.find(f => f.id === writingFont)?.className || 'font-body';
 
     useEffect(() => {
         setIsMounted(true);
@@ -108,7 +112,10 @@ export default function Editor({ chapter, onContentChange }: EditorProps) {
                     ref={editorRef}
                     contentEditable={!isProofreading}
                     onInput={handleInput}
-                    className="prose dark:prose-invert max-w-none p-8 h-full focus:outline-none font-body"
+                    className={cn(
+                        "prose dark:prose-invert max-w-none p-8 h-full focus:outline-none",
+                        fontClass
+                    )}
                     style={{ minHeight: '60vh' }}
                 />
             </div>

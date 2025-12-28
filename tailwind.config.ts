@@ -20,6 +20,11 @@ export default {
         body: ['Literata', 'serif'],
         headline: ['Literata', 'serif'],
         code: ['monospace'],
+        literata: ['Literata', 'serif'],
+        merriweather: ['Merriweather', 'serif'],
+        lora: ['Lora', 'serif'],
+        inter: ['Inter', 'sans-serif'],
+        roboto: ['Roboto', 'sans-serif'],
       },
       colors: {
         background: 'hsl(var(--background))',
@@ -107,7 +112,7 @@ export default {
               fontFamily: theme('fontFamily.headline').join(', '),
             },
             'p, li, blockquote': {
-                fontFamily: theme('fontFamily.body').join(', '),
+                fontFamily: 'inherit',
             }
           },
         },

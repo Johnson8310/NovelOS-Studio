@@ -11,3 +11,5 @@ export type Template = {
 };
 
 export type TemplateType = 'novel' | 'memoir' | 'poetry';
+
+export type WritingFont = 'literata' | 'merriweather' | 'lora' | 'inter' | 'roboto';

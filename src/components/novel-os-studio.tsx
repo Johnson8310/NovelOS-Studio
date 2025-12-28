@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import type { Chapter, TemplateType } from '@/lib/types';
+import type { Chapter, TemplateType, WritingFont } from '@/lib/types';
 import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import ChapterSidebar from '@/components/chapter-sidebar';
 import AppHeader from '@/components/app-header';
@@ -37,6 +37,7 @@ export default function NovelOSStudio() {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('editor');
+  const [writingFont, setWritingFont] = useState<WritingFont>('literata');
   const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
 
@@ -45,6 +46,7 @@ export default function NovelOSStudio() {
     try {
       const savedChapters = localStorage.getItem('novelOS-chapters');
       const savedActiveChapterId = localStorage.getItem('novelOS-activeChapterId');
+      const savedFont = localStorage.getItem('novelOS-font') as WritingFont;
       
       if (savedChapters) {
         const parsedChapters: Chapter[] = JSON.parse(savedChapters);
@@ -58,6 +60,11 @@ export default function NovelOSStudio() {
         setChapters(initialChapters);
         setActiveChapterId(initialChapters[0].id);
       }
+
+      if (savedFont) {
+        setWritingFont(savedFont);
+      }
+
     } catch (error) {
       console.error("Failed to load from localStorage", error);
       setChapters(initialChapters);
@@ -72,11 +79,12 @@ export default function NovelOSStudio() {
         if (activeChapterId) {
           localStorage.setItem('novelOS-activeChapterId', activeChapterId);
         }
+        localStorage.setItem('novelOS-font', writingFont);
       } catch (error) {
         console.error("Failed to save to localStorage", error);
       }
     }
-  }, [chapters, activeChapterId, isMounted]);
+  }, [chapters, activeChapterId, writingFont, isMounted]);
 
   const handleAddChapter = () => {
     const newChapter: Chapter = {
@@ -164,7 +172,12 @@ export default function NovelOSStudio() {
         />
       </Sidebar>
       <SidebarInset className="flex flex-col h-screen">
-        <AppHeader onSelectTemplate={handleSelectTemplate} chapters={chapters} />
+        <AppHeader 
+          onSelectTemplate={handleSelectTemplate} 
+          chapters={chapters} 
+          writingFont={writingFont}
+          onFontChange={setWritingFont}
+        />
         <div className="flex-grow p-4 pt-0 flex flex-col">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col">
                 <TabsList className="mb-4 self-start">
@@ -177,6 +190,7 @@ export default function NovelOSStudio() {
                             key={activeChapter.id}
                             chapter={activeChapter} 
                             onContentChange={(content) => handleUpdateChapter(activeChapter.id, { content })}
+                            writingFont={writingFont}
                         />
                     ) : (
                         <div className="flex items-center justify-center h-full text-muted-foreground">

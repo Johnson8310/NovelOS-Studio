@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { SidebarTrigger } from './ui/sidebar';
-import { Flame } from 'lucide-react';
+import { Flame, Check } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,22 +10,27 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
-import type { Chapter, TemplateType } from '@/lib/types';
+import type { Chapter, TemplateType, WritingFont } from '@/lib/types';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import htmlToDocx from 'html-to-docx';
 import { saveAs } from 'file-saver';
+import { fonts } from '@/lib/fonts';
 
 
 interface AppHeaderProps {
   onSelectTemplate: (template: TemplateType) => void;
   chapters: Chapter[];
+  writingFont: WritingFont;
+  onFontChange: (font: WritingFont) => void;
 }
 
-export default function AppHeader({ onSelectTemplate, chapters }: AppHeaderProps) {
+export default function AppHeader({ onSelectTemplate, chapters, writingFont, onFontChange }: AppHeaderProps) {
   const { toast } = useToast();
 
   const handleComingSoon = () => {
@@ -51,7 +56,7 @@ export default function AppHeader({ onSelectTemplate, chapters }: AppHeaderProps
     tempContainer.style.left = '-9999px';
     tempContainer.style.width = '800px'; // A reasonable width for rendering
     tempContainer.style.padding = '20px';
-    tempContainer.style.fontFamily = 'serif';
+    tempContainer.style.fontFamily = fonts.find(f => f.id === writingFont)?.name || 'Literata';
     
     document.body.appendChild(tempContainer);
 
@@ -87,7 +92,7 @@ export default function AppHeader({ onSelectTemplate, chapters }: AppHeaderProps
 
         } else if (format === 'docx') {
              const fileBuffer = await htmlToDocx(combinedContent, undefined, {
-                font: 'Literata',
+                font: fonts.find(f => f.id === writingFont)?.name || 'Literata',
                 fontSize: 12,
              });
              saveAs(fileBuffer as Blob, 'novel.docx');
@@ -120,11 +125,27 @@ export default function AppHeader({ onSelectTemplate, chapters }: AppHeaderProps
         <SidebarTrigger />
         <h1 className="text-xl font-headline font-bold text-foreground">NovelOS Studio</h1>
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
         <div className="flex items-center gap-2 text-sm text-amber-500 font-medium">
             <Flame className="h-5 w-5" />
             <span>3-day streak</span>
         </div>
+        
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline">Font</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+                <DropdownMenuRadioGroup value={writingFont} onValueChange={(value) => onFontChange(value as WritingFont)}>
+                    {fonts.map((font) => (
+                        <DropdownMenuRadioItem key={font.id} value={font.id}>
+                            {font.name}
+                        </DropdownMenuRadioItem>
+                    ))}
+                </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+        </DropdownMenu>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline">File</Button>
