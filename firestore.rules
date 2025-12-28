@@ -1,0 +1,200 @@
+/**
+ * Core Philosophy: This ruleset enforces a strict user-ownership security model.
+ * All user-generated content, specifically manuscripts and their chapters, is
+ * private and accessible only by the user who created it. This ensures user
+ * data privacy and integrity.
+ *
+ * Data Structure: The data is organized into two main categories:
+ * 1. User-Private Data: Nested under `/users/{userId}`, this includes collections
+ *    like `manuscripts` and their subcollections (`chapters`). This structure
+ *    inherently links data to its owner.
+ * 2. Global, Read-Only Data: Top-level collections such as `templates`,
+ *    `stylePresets`, `prompts`, and `achievements` contain application-wide
+ *    resources. These are readable by all authenticated users but are not
+ *    writable by them, presumably managed by administrators.
+ *
+ * Key Security Decisions:
+ * - Strict Ownership: A user can only access data within their own
+ *   `/users/{userId}` data tree. There is no concept of shared or public
+ *   manuscripts.
+ * - No User Listing: The rules do not allow for querying the top-level `/users`
+ *   collection, preventing any user from discovering other users.
+ * - Read-Only Global Resources: To maintain application integrity, all shared
+ *   resources (`templates`, etc.) are immutable from the client-side. This
+ *   prevents users from tampering with shared application data.
+ * - Deny by Default: Any operation not explicitly allowed is denied.
+ *
+ * Denormalization for Authorization: The data structure leverages path-based
+ * security by placing all user-owned documents under a path containing their
+ * unique user ID (e.g., `/users/{userId}/...`). This is a highly performant
+ * form of denormalization, as the ownership (`userId`) is available directly in
+ * the rule's context without needing extra database reads (`get()` calls).
+ *
+ * Structural Segregation: The design clearly separates private user data
+ * (`/users/{userId}`) from public application data (`/templates`, `/prompts`, etc.).
+ * This segregation simplifies rule logic and improves query performance and
+ * security, as list operations on user collections are naturally scoped to the
+ * authenticated user.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    //-------------------------------------------------------------------------
+    // Helper Functions
+    //-------------------------------------------------------------------------
+
+    /**
+     * Checks if a user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user is the owner of a document,
+     * based on the userId wildcard from the path.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * For update/delete operations, checks ownership AND that the document
+     * already exists. This prevents modifying or deleting non-existent data.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * On chapter creation, ensures the new chapter document contains a
+     * 'manuscriptId' field that correctly points to its parent manuscript
+     * as defined by the path.
+     */
+    function isLinkedToParentManuscript(manuscriptId) {
+      return request.resource.data.manuscriptId == manuscriptId;
+    }
+
+    /**
+     * On chapter update, ensures the 'manuscriptId' field cannot be changed,
+     * maintaining the chapter's relationship to its parent manuscript.
+     */
+    function isParentManuscriptImmutable() {
+      return request.resource.data.manuscriptId == resource.data.manuscriptId;
+    }
+
+
+    //-------------------------------------------------------------------------
+    // User-Specific Data Rules (/users/{userId}/...)
+    //-------------------------------------------------------------------------
+
+    match /users/{userId} {
+
+      /**
+       * @description Controls access to a user's manuscripts. Only the owner
+       *              can create, read, update, or delete their own manuscripts.
+       * @path /users/{userId}/manuscripts/{manuscriptId}
+       * @allow (get) An authenticated user with uid 'user123' reading their own
+       *        manuscript at '/users/user123/manuscripts/abc'.
+       * @deny (get) A user 'user456' attempting to read a manuscript at
+       *       '/users/user123/manuscripts/abc'.
+       * @principle Restricts access to a user's own data tree.
+       */
+      match /manuscripts/{manuscriptId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isExistingOwner(userId);
+        allow delete: if isExistingOwner(userId);
+
+        /**
+         * @description Controls access to chapters within a user's manuscript.
+         *              Access is inherited from the parent manuscript's owner.
+         * @path /users/{userId}/manuscripts/{manuscriptId}/chapters/{chapterId}
+         * @allow (create) An authenticated user 'user123' creating a new chapter
+         *        in their own manuscript.
+         * @deny (update) A user 'user123' trying to move a chapter to a different
+         *       manuscript by changing its 'manuscriptId' field.
+         * @principle Enforces document ownership and relational integrity between a
+         *          chapter and its parent manuscript.
+         */
+        match /chapters/{chapterId} {
+          allow get: if isOwner(userId);
+          allow list: if isOwner(userId);
+          allow create: if isOwner(userId) && isLinkedToParentManuscript(manuscriptId);
+          allow update: if isExistingOwner(userId) && isParentManuscriptImmutable();
+          allow delete: if isExistingOwner(userId);
+        }
+      }
+    }
+
+    //-------------------------------------------------------------------------
+    // Global Read-Only Collections
+    //-------------------------------------------------------------------------
+
+    /**
+     * @description Controls access to global templates. All authenticated users
+     *              can read templates, but no user can write to this collection.
+     * @path /templates/{templateId}
+     * @allow (get) Any authenticated user can read a template.
+     * @deny (create) Any user attempting to create a new template document.
+     * @principle Secures shared application resources as read-only for clients.
+     */
+    match /templates/{templateId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Controls access to global style presets. All authenticated
+     *              users can read presets, but no user can write them.
+     * @path /stylePresets/{stylePresetId}
+     * @allow (list) Any authenticated user can list all available style presets.
+     * @deny (update) Any user attempting to modify an existing style preset.
+     * @principle Secures shared application resources as read-only for clients.
+     */
+    match /stylePresets/{stylePresetId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Controls access to global writing prompts. All authenticated
+     *              users can read prompts, but no user can write them.
+     * @path /prompts/{promptId}
+     * @allow (get) Any authenticated user can read a specific prompt.
+     * @deny (delete) Any user attempting to delete a prompt.
+     * @principle Secures shared application resources as read-only for clients.
+     */
+    match /prompts/{promptId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Controls access to global achievements. All authenticated users
+     *              can read achievements, but no user can write them.
+     * @path /achievements/{achievementId}
+     * @allow (list) Any authenticated user can list all achievements.
+     * @deny (create) Any user attempting to create a new achievement.
+     * @principle Secures shared application resources as read-only for clients.
+     */
+    match /achievements/{achievementId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
