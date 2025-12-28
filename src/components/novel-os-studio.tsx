@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React from 'react';
 import type { Chapter, TemplateType, WritingFont } from '@/lib/types';
 import { Sidebar, SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import ChapterSidebar from '@/components/chapter-sidebar';
@@ -12,6 +12,7 @@ import CoverCreator from './cover-creator';
 import NotesSection from './notes-section';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/firebase';
 
 const initialChapters: Chapter[] = [
   { id: '1', title: 'Chapter 1: The Beginning', content: '<h1>The Journey Begins</h1><p>It was a dark and stormy night... or maybe just a bit overcast. Either way, our story starts here. Write something amazing!</p>' },
@@ -41,15 +42,16 @@ const templates: Record<TemplateType, Chapter[]> = {
 };
 
 export default function NovelOSStudio() {
-  const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('editor');
-  const [writingFont, setWritingFont] = useState<WritingFont>('literata');
-  const [notes, setNotes] = useState<Record<string, string>>(initialNotes);
-  const [isMounted, setIsMounted] = useState(false);
+  const { user, isUserLoading } = useUser();
+  const [chapters, setChapters] = React.useState<Chapter[]>([]);
+  const [activeChapterId, setActiveChapterId] = React.useState<string | null>(null);
+  const [activeTab, setActiveTab] = React.useState('editor');
+  const [writingFont, setWritingFont] = React.useState<WritingFont>('literata');
+  const [notes, setNotes] = React.useState<Record<string, string>>(initialNotes);
+  const [isMounted, setIsMounted] = React.useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
+  React.useEffect(() => {
     setIsMounted(true);
     try {
       const savedChapters = localStorage.getItem('novelOS-chapters');
@@ -86,7 +88,7 @@ export default function NovelOSStudio() {
     }
   }, []);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (isMounted) {
       try {
         localStorage.setItem('novelOS-chapters', JSON.stringify(chapters));
@@ -163,16 +165,16 @@ export default function NovelOSStudio() {
     setNotes(prevNotes => ({ ...prevNotes, [section]: content }));
   }
 
-  const activeChapter = useMemo(() => chapters.find(c => c.id === activeChapterId), [chapters, activeChapterId]);
+  const activeChapter = React.useMemo(() => chapters.find(c => c.id === activeChapterId), [chapters, activeChapterId]);
   
-  const totalWordCount = useMemo(() => 
+  const totalWordCount = React.useMemo(() => 
     chapters.reduce((acc, chapter) => {
       const text = new DOMParser().parseFromString(chapter.content, 'text/html').body.textContent || '';
       return acc + (text.trim().split(/\s+/).filter(Boolean).length);
     }, 0), 
   [chapters]);
 
-  if (!isMounted) {
+  if (!isMounted || isUserLoading) {
     return null; // or a loading spinner
   }
 
