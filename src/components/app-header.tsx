@@ -13,10 +13,14 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
-import type { Chapter } from '@/lib/types';
+import type { Chapter, TemplateType } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-export default function AppHeader() {
+interface AppHeaderProps {
+  onSelectTemplate: (template: TemplateType) => void;
+}
+
+export default function AppHeader({ onSelectTemplate }: AppHeaderProps) {
   const { toast } = useToast();
 
   const handleComingSoon = () => {
@@ -51,9 +55,9 @@ export default function AppHeader() {
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuLabel>Templates</DropdownMenuLabel>
-            <DropdownMenuItem onClick={handleComingSoon}>Novel</DropdownMenuItem>
-            <DropdownMenuItem onClick={handleComingSoon}>Memoir</DropdownMenuItem>
-            <DropdownMenuItem onClick={handleComingSoon}>Poetry</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onSelectTemplate('novel')}>Novel</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onSelectTemplate('memoir')}>Memoir</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onSelectTemplate('poetry')}>Poetry</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuLabel>Styles</DropdownMenuLabel>
             <DropdownMenuItem onClick={handleComingSoon}>Apply Custom Style</DropdownMenuItem>

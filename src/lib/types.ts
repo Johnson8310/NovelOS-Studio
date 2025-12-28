@@ -9,3 +9,5 @@ export type Template = {
   name: string;
   description: string;
 };
+
+export type TemplateType = 'novel' | 'memoir' | 'poetry';
