@@ -164,7 +164,7 @@ export default function NovelOSStudio() {
         />
       </Sidebar>
       <SidebarInset className="flex flex-col h-screen">
-        <AppHeader onSelectTemplate={handleSelectTemplate} />
+        <AppHeader onSelectTemplate={handleSelectTemplate} chapters={chapters} />
         <div className="flex-grow p-4 pt-0 flex flex-col">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col">
                 <TabsList className="mb-4 self-start">

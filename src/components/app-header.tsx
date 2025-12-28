@@ -14,13 +14,18 @@ import {
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import type { Chapter, TemplateType } from '@/lib/types';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import htmlToDocx from 'html-to-docx';
+import { saveAs } from 'file-saver';
+
 
 interface AppHeaderProps {
   onSelectTemplate: (template: TemplateType) => void;
+  chapters: Chapter[];
 }
 
-export default function AppHeader({ onSelectTemplate }: AppHeaderProps) {
+export default function AppHeader({ onSelectTemplate, chapters }: AppHeaderProps) {
   const { toast } = useToast();
 
   const handleComingSoon = () => {
@@ -30,12 +35,83 @@ export default function AppHeader({ onSelectTemplate }: AppHeaderProps) {
     });
   };
 
-  const handleExport = (format: 'pdf' | 'epub' | 'docx') => {
+  const handleExport = async (format: 'pdf' | 'epub' | 'docx') => {
     toast({
       title: `Exporting to ${format.toUpperCase()}`,
-      description: `Your novel is being prepared for export. This is a mock action.`,
+      description: `Your novel is being prepared for export...`,
     });
-    // In a real app, you would generate the file here.
+
+    const combinedContent = chapters.map(chapter => 
+        `<h1>${chapter.title}</h1><div>${chapter.content}</div>`
+    ).join('<hr>');
+
+    const tempContainer = document.createElement('div');
+    tempContainer.innerHTML = combinedContent;
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.width = '800px'; // A reasonable width for rendering
+    tempContainer.style.padding = '20px';
+    tempContainer.style.fontFamily = 'serif';
+    
+    document.body.appendChild(tempContainer);
+
+
+    try {
+        if (format === 'pdf') {
+            const canvas = await html2canvas(tempContainer, { scale: 2 });
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const ratio = canvasWidth / canvasHeight;
+            const width = pdfWidth;
+            const height = width / ratio;
+
+            let position = 0;
+            let pageHeight = pdf.internal.pageSize.height;
+            let heightLeft = height;
+
+            pdf.addImage(imgData, 'PNG', 0, position, width, height);
+            heightLeft -= pageHeight;
+
+            while (heightLeft > 0) {
+                position = heightLeft - height;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, width, height);
+                heightLeft -= pageHeight;
+            }
+            
+            pdf.save("novel.pdf");
+
+        } else if (format === 'docx') {
+             const fileBuffer = await htmlToDocx(combinedContent, undefined, {
+                font: 'Literata',
+                fontSize: 12,
+             });
+             saveAs(fileBuffer as Blob, 'novel.docx');
+
+        } else if (format === 'epub') {
+            handleComingSoon();
+            return;
+        }
+
+        toast({
+            title: "Export Complete",
+            description: `Your novel has been exported to ${format.toUpperCase()}.`,
+        });
+
+    } catch (error) {
+        console.error("Export failed:", error);
+        toast({
+            variant: "destructive",
+            title: "Export Failed",
+            description: "An error occurred while exporting your novel.",
+        });
+    } finally {
+        document.body.removeChild(tempContainer);
+    }
   };
 
   return (
