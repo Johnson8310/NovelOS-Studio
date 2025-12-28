@@ -12,8 +12,28 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from './ui/button';
+import { useToast } from '@/hooks/use-toast';
+import type { Chapter } from '@/lib/types';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function AppHeader() {
+  const { toast } = useToast();
+
+  const handleComingSoon = () => {
+    toast({
+      title: "Feature Coming Soon",
+      description: "This feature is not yet available.",
+    });
+  };
+
+  const handleExport = (format: 'pdf' | 'epub' | 'docx') => {
+    toast({
+      title: `Exporting to ${format.toUpperCase()}`,
+      description: `Your novel is being prepared for export. This is a mock action.`,
+    });
+    // In a real app, you would generate the file here.
+  };
+
   return (
     <header className="flex items-center justify-between p-4 border-b">
       <div className="flex items-center gap-4">
@@ -31,21 +51,22 @@ export default function AppHeader() {
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuLabel>Templates</DropdownMenuLabel>
-            <DropdownMenuItem disabled>Novel</DropdownMenuItem>
-            <DropdownMenuItem disabled>Memoir</DropdownMenuItem>
-            <DropdownMenuItem disabled>Poetry</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleComingSoon}>Novel</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleComingSoon}>Memoir</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleComingSoon}>Poetry</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuLabel>Styles</DropdownMenuLabel>
-            <DropdownMenuItem disabled>Apply Custom Style</DropdownMenuItem>
-            <DropdownMenuItem disabled>Save Current Style</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleComingSoon}>Apply Custom Style</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleComingSoon}>Save Current Style</DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuLabel>Export</DropdownMenuLabel>
-             <DropdownMenuItem disabled>Export to PDF</DropdownMenuItem>
-             <DropdownMenuItem disabled>Export to ePub</DropdownMenuItem>
-             <DropdownMenuItem disabled>Export to DOCX</DropdownMenuItem>
+             <DropdownMenuItem onClick={() => handleExport('pdf')}>Export to PDF</DropdownMenuItem>
+             <DropdownMenuItem onClick={() => handleExport('epub')}>Export to ePub</DropdownMenuItem>
+             <DropdownMenuItem onClick={() => handleExport('docx')}>Export to DOCX</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
     </header>
   );
 }
+    
