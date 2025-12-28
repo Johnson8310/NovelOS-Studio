@@ -9,6 +9,7 @@ import Editor from '@/components/editor';
 import StatusBar from '@/components/status-bar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import CoverCreator from './cover-creator';
+import NotesSection from './notes-section';
 import { v4 as uuidv4 } from 'uuid';
 import { useToast } from '@/hooks/use-toast';
 
@@ -16,6 +17,12 @@ const initialChapters: Chapter[] = [
   { id: '1', title: 'Chapter 1: The Beginning', content: '<h1>The Journey Begins</h1><p>It was a dark and stormy night... or maybe just a bit overcast. Either way, our story starts here. Write something amazing!</p>' },
   { id: '2', title: 'Chapter 2: The Plot Thickens', content: '<h1>Rising Action</h1><p>Suddenly, a mysterious stranger appeared.</p>' },
 ];
+
+const initialNotes = {
+  characters: '',
+  locations: '',
+  plotPoints: '',
+};
 
 const templates: Record<TemplateType, Chapter[]> = {
   novel: [
@@ -38,6 +45,7 @@ export default function NovelOSStudio() {
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('editor');
   const [writingFont, setWritingFont] = useState<WritingFont>('literata');
+  const [notes, setNotes] = useState<Record<string, string>>(initialNotes);
   const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
 
@@ -47,6 +55,7 @@ export default function NovelOSStudio() {
       const savedChapters = localStorage.getItem('novelOS-chapters');
       const savedActiveChapterId = localStorage.getItem('novelOS-activeChapterId');
       const savedFont = localStorage.getItem('novelOS-font') as WritingFont;
+      const savedNotes = localStorage.getItem('novelOS-notes');
       
       if (savedChapters) {
         const parsedChapters: Chapter[] = JSON.parse(savedChapters);
@@ -65,10 +74,15 @@ export default function NovelOSStudio() {
         setWritingFont(savedFont);
       }
 
+      if (savedNotes) {
+        setNotes(JSON.parse(savedNotes));
+      }
+
     } catch (error) {
       console.error("Failed to load from localStorage", error);
       setChapters(initialChapters);
       setActiveChapterId(initialChapters[0].id);
+      setNotes(initialNotes);
     }
   }, []);
 
@@ -80,11 +94,12 @@ export default function NovelOSStudio() {
           localStorage.setItem('novelOS-activeChapterId', activeChapterId);
         }
         localStorage.setItem('novelOS-font', writingFont);
+        localStorage.setItem('novelOS-notes', JSON.stringify(notes));
       } catch (error) {
         console.error("Failed to save to localStorage", error);
       }
     }
-  }, [chapters, activeChapterId, writingFont, isMounted]);
+  }, [chapters, activeChapterId, writingFont, notes, isMounted]);
 
   const handleAddChapter = () => {
     const newChapter: Chapter = {
@@ -98,7 +113,6 @@ export default function NovelOSStudio() {
 
   const handleDeleteChapter = (id: string) => {
     if (chapters.length <= 1) {
-        // Prevent deleting the last chapter
         toast({
           variant: "destructive",
           title: "Action not allowed",
@@ -144,6 +158,10 @@ export default function NovelOSStudio() {
       description: `The ${template} template has been applied to your manuscript.`
     })
   }
+  
+  const handleNotesChange = (section: string, content: string) => {
+    setNotes(prevNotes => ({ ...prevNotes, [section]: content }));
+  }
 
   const activeChapter = useMemo(() => chapters.find(c => c.id === activeChapterId), [chapters, activeChapterId]);
   
@@ -183,6 +201,7 @@ export default function NovelOSStudio() {
                 <TabsList className="mb-4 self-start">
                     <TabsTrigger value="editor">Editor</TabsTrigger>
                     <TabsTrigger value="cover">Cover Creator</TabsTrigger>
+                    <TabsTrigger value="notes">Notes</TabsTrigger>
                 </TabsList>
                 <TabsContent value="editor" className="flex-grow flex flex-col bg-card rounded-lg border shadow-sm">
                     {activeChapter ? (
@@ -200,6 +219,9 @@ export default function NovelOSStudio() {
                 </TabsContent>
                 <TabsContent value="cover" className="flex-grow">
                     <CoverCreator />
+                </TabsContent>
+                 <TabsContent value="notes" className="flex-grow">
+                    <NotesSection notes={notes} onNotesChange={handleNotesChange} />
                 </TabsContent>
             </Tabs>
         </div>
