@@ -20,6 +20,7 @@ import { saveAs } from 'file-saver';
 import { fonts } from '@/lib/fonts';
 import { generatePdf } from '@/lib/pdf-export';
 import { generateDocx } from '@/app/actions/export';
+import { ThemeToggle } from './theme-toggle';
 
 
 interface AppHeaderProps {
@@ -127,6 +128,8 @@ export default function AppHeader({ onSelectTemplate, chapters, writingFont, onF
              <DropdownMenuItem onClick={() => handleExport('docx')}>Export to DOCX</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <ThemeToggle />
       </div>
     </header>
   );
